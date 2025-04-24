@@ -32,6 +32,22 @@ library(tinytex)   # for example
 
 *Should be in paragraph from (not bullets).  Written for a 3rd party such as your client’s boss, or an external review board.  As part of your description, consider the following:*
 
+The NNSA is researching new foams to put into Navy helmets. 
+Navy personel receive one helmet for their uniform for their entire career in the military. After basic training, the helmet receives a lot of impact, and the helmet takes shocks. Currently, at 10C, the glass transition temp - foam becomes stiff and hard. It performs better when warm. Foam is better energy absorption when its warm. Need to create a foam to be stable across temperatures. There's a comfort layer and firm layer of foam in the helmet. Dr. Moira Foster is tracking the viscoelastic (short term effect) and damage (long term effect) of several different foams.
+
+Changes in material: viscoelastic (short term) and damage (long term). This is what she's tracking. The foams have several different measures:
+ - Visco (dampling)
+ - Elastic (how squishy it is and bounce back)
+The foam is in essence like a memory foam pillow.
+
+She also is observing two densities of foam high (71% air) and low (81% air) porosity. She wants to see how chemical index and porosity affects the foam. There are 6 different foams total to test.
+
+Each foam was intially squished for 120 seconds, and then continuous squishes at certian frequencies and amplitudes determined by Dr. Foster. Sinusoidal squishes. The stress, strain, and relative porosity measured at the beginning of the experiement were also chosen by Dr. Foster and the physical constraints of the foams. After a certain amount of cycles, Dr. Foster measured damping, dynamic elasticity, static elasticicy, and non-linearity.
+
+Want to predict how the effects of the foam change over time with various strains, stresses. 
+
+We were specifically tasked with investigating nonlinear viscous parameter (NVP). Only five papers have been published regarding this parameter. As nonlinearity increases, stiffness compression decreases. 
+
 - *Type of study [Designed experiment, Observational study, Sample survey] and brief description of design*
 Designed experiment to squish foam. 
 
