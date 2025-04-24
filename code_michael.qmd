@@ -1,0 +1,352 @@
+---
+title: "EDA"
+format: pdf
+editor: visual
+editor_options: 
+  chunk_output_type: inline
+---
+
+```{r}
+rm(list=ls())
+library(readxl)
+library(tidyverse)
+library(ggplot2)
+library(dplyr)
+library(mosaic)
+library(GGally)
+library(ggthemes)
+library(lme4)
+library(emmeans)
+#setwd("C:\\Users\\21bas\\Documents\\MATH482\\Final Project")
+```
+
+
+Data wrangling steps:
+
+```{r}
+df <- read_excel("Foster_Mines_Capstone_Data_v2.xlsx")
+
+# Step 1: Pivot the cycle count columns (Cyc_A to Cyc_N)
+cycle_counts_long <- df %>%
+  select(SampleCode, strain, Stress_kPa, Relporo, freq, amp,
+         starts_with("Cyc_")) %>%
+  pivot_longer(
+    cols = starts_with("Cyc_"),
+    names_to = "Cycle",
+    names_prefix = "Cyc_",
+    values_to = "CycleCount"
+  )
+
+# Step 2: Pivot each of the other variable groups (E1_MPA, tandelta, etc.)
+pivot_group <- function(df, var_prefix) {
+  df %>%
+    select(SampleCode, starts_with(var_prefix)) %>%
+    pivot_longer(
+      cols = -SampleCode,
+      names_to = "Cycle",
+      names_pattern = paste0(var_prefix, "_Cyc_([A-N])"),
+      values_to = var_prefix
+    )
+}
+
+e1_long <- pivot_group(df, "E1_MPA")
+td_long <- pivot_group(df, "tandelta")
+estatic_long <- pivot_group(df, "Estatic_MPA")
+nvp_long <- pivot_group(df, "NVP")
+
+# Step 3: Join all long dataframes by SampleCode and Cycle
+final_df <- cycle_counts_long %>%
+  left_join(e1_long,      by = c("SampleCode", "Cycle")) %>%
+  left_join(td_long,      by = c("SampleCode", "Cycle")) %>%
+  left_join(estatic_long, by = c("SampleCode", "Cycle")) %>%
+  left_join(nvp_long,     by = c("SampleCode", "Cycle"))
+
+final_df <- final_df |>
+  separate(SampleCode, into = c("Sample", "Chemical", "Porosity%", "Sample_ID"), sep = "_")
+
+final_df <- final_df[,-1 ]  # removes the 1st column
+final_df <- na.omit(final_df)
+
+colnames(final_df)[11:13] <- c("Dyn_Stiff", "Damping", "Stat_Stiff")
+
+# Remove cycle counts above 10,000
+final_df <- final_df |> group_by(Sample_ID) |>
+  filter(CycleCount <= 10000)
+
+final_df <- final_df |> filter(Damping > 0)
+
+# Normalize by the initial value - set this to 0
+final_df <- final_df |> group_by(Sample_ID) |>
+  mutate(StNVP = NVP/NVP[Cycle == "A"]) |> ungroup()
+
+# Filter out all values above 2 in standardized NVP
+final_df <- final_df |> filter(StNVP < 2)
+
+# Remove dynamic stiffness, damping, static stiffness
+final_df <- final_df |> select(-c(Dyn_Stiff, Damping, Stat_Stiff)) |>
+  mutate(logCycleCount = ifelse(CycleCount > 0, log(CycleCount), 0)) |>
+  mutate(sqrtCycleCount = sqrt(CycleCount))
+
+# Create data frame without the large NVP samples
+low_nonlin <- final_df |> filter(NVP < 0.15)
+
+# Create a level 2 data frame for analysis of level 2 variables
+final_l2 <- final_df |> group_by(Sample_ID) |>
+  summarise(Mean_NVP = mean(NVP),
+            Max_NVP = max(NVP), max_NVP_diff = max(diff(NVP)),
+            across(c(Chemical, `Porosity%`, strain, Stress_kPa, 
+                     Relporo, freq, amp), first)) |> ungroup()
+
+# Create a level 2 data frame for analysis of level 2 variables
+l2_small <- low_nonlin |> group_by(Sample_ID) |>
+  summarise(Mean_NVP = mean(NVP),
+            Max_NVP = max(NVP), max_NVP_diff = max(diff(NVP)),
+            across(c(Chemical, `Porosity%`, strain, Stress_kPa, 
+                     Relporo, freq, amp), first)) |> ungroup()
+
+# Do EDA with slopes and intercepts
+# Fit a model for each group
+models <- final_df %>%
+  group_by(Sample_ID) %>%
+  nest() %>%
+  mutate(model = map(data, ~lm(NVP ~ logCycleCount, data = .x)))
+
+# Add model summaries
+models <- models %>%
+  mutate(
+    summary = map(model, summary),
+    coef = map(model, ~coef(.x)))
+
+library(broom)
+
+# Get a data frame of the coefficients
+tidy_models <- models %>%
+  mutate(tidy = map(model, tidy)) %>%
+  unnest(tidy)
+
+# Change the data frame from long to wide
+tidy_models <- tidy_models |>
+  pivot_wider(names_from = term, 
+              values_from = c(estimate, std.error, statistic, p.value))
+tidy_to_add <- tidy_models |> select(-c(data, model, summary, coef))
+colnames(tidy_to_add) <- c("Sample_ID", "Intercept", "Slope", 
+                           "SE_Intercept", "SE_Slope",
+                           "tStatIntercept", "tStatSlope", "pValIntercept",
+                           "pValSlope")
+
+# Merge with the level 2 data set
+final_l2 <- full_join(final_l2, tidy_to_add, by = "Sample_ID")
+
+```
+
+
+# EDA
+
+```{r}
+# Lattice plot - NVP over time by sample (filter to only select some samples)
+df_some <- final_df |> filter(Sample_ID %in% c("100", "103", "104", "166",
+                                               "150", "149"))
+
+df_spikes <- final_df |> filter(Sample_ID %in% c("100", "150", "133"))
+
+ggplot(df_some, aes(x = CycleCount, y = NVP)) +
+  geom_point() + facet_wrap(~ Sample_ID) + geom_smooth()
+```
+
+```{r}
+# Look at the three samples with high NVP
+high_NVP <- final_df |> filter(Sample_ID %in% c("150", "166", "149"))
+ggplot(data = high_NVP, aes(x = CycleCount, y = NVP, group = Sample_ID, 
+                     color = as.factor(Sample_ID))) +
+  geom_line() + geom_point() + # Lines for each subject
+  labs(title = "Spaghetti Plot", x = "Number of Squishes", 
+       y = "NVP", color = "ID")
+```
+
+
+
+```{r}
+ggplot(data = final_df, aes(x = sqrtCycleCount, y = NVP, group = Sample_ID, 
+                     color = as.factor(Sample_ID))) +
+  geom_line() + geom_point() + # Lines for each subject
+  labs(title = "Spaghetti Plot", x = "Number of Squishes", y = "NVP", 
+       color = "ID")+
+  theme_minimal() + theme(legend.position = "none")
+
+ggplot(data = df_some, aes(x = CycleCount, y = NVP, group = Sample_ID,
+                     color = as.factor(Sample_ID))) +
+  geom_line() + geom_point() + # Lines for each subject
+  labs(title = "Plot of a few samples by cycle count", 
+       x = "Number of Squishes", y = "NVP", color = "ID")+
+  theme_minimal()
+
+ggplot(data = final_df, aes(x = CycleCount, y = NVP, group = Sample_ID, 
+                     color = as.factor(Sample_ID))) +
+  geom_line() + geom_point() + # Lines for each subject
+  labs(title = "Spaghetti Plot", x = "Number of Squishes", y = "NVP", color = "ID") +
+  theme_minimal() + theme(legend.position = "none") + 
+  facet_grid(. ~ `Porosity%`)
+
+ggplot(data = final_df, aes(x = CycleCount, y = NVP, group = Sample_ID, 
+                     color = as.factor(Sample_ID))) +
+  geom_line() + geom_point() + # Lines for each subject
+  labs(title = "Spaghetti Plot", x = "Number of Squishes", y = "NVP", color = "ID") +
+  theme_minimal() + theme(legend.position = "none") + 
+  facet_grid(. ~ Chemical)
+```
+
+```{r}
+# Do some EDA on level 2
+
+# Analysis of strain rate
+final_l2 |> ggplot(aes(x = freq*amp, y = Mean_NVP, colour = `Porosity%`)) +
+  facet_wrap(vars(Chemical)) +
+  geom_point() + scale_color_colorblind() + geom_lm() +
+  labs(y = "Mean NVP", 
+       title = "NVP by Strain Rate for Different Chemicals and Porosities")
+final_l2 |> ggplot(aes(x = freq*amp, y = Mean_NVP, colour = Chemical)) +
+  geom_point() + scale_color_colorblind() + geom_lm() +
+  labs(y = "Mean NVP", 
+       title = "NVP by Strain Rate for Different Chemicals")
+
+# Analysis of amplitude
+final_l2 |> ggplot(aes(x = amp, y = Mean_NVP, colour = `Porosity%`)) +
+  #facet_wrap(vars(Chemical)) +
+  geom_point() + scale_color_colorblind() + geom_lm() +
+  labs(y = "Mean NVP", 
+       title = "NVP by Amplitude for Different Chemicals and Porosities")
+
+# Analysis of stress
+final_l2 |> ggplot(aes(x = Stress_kPa, y = Mean_NVP, colour = Chemical)) +
+  geom_point() + scale_color_colorblind() +
+  labs(x = "Stress (kPa)", y = "Mean NVP", 
+       title = "Stress by NVP for Different Chemicals")
+final_l2 |> ggplot(aes(x = Stress_kPa, y = Mean_NVP, colour = `Porosity%`)) +
+  geom_point() + scale_color_colorblind() + facet_wrap(vars(Chemical)) +
+  labs(x = "Stress (kPa)", y = "Mean NVP", 
+       title = "Stress by NVP for Different Chemicals and Porosities")
+final_l2 |> ggplot(aes(x = Stress_kPa, y = Mean_NVP, colour = `Porosity%`)) +
+  geom_point() + scale_color_colorblind() +
+  labs(x = "Stress (kPa)", y = "Mean NVP", 
+       title = "Stress by NVP at Different Porosities")
+
+# Analysis of porosity
+final_l2 |> ggplot(aes(x = `Porosity%`, y = Mean_NVP, colour = `Porosity%`)) +
+  geom_boxplot() + scale_color_colorblind() +
+  facet_wrap(vars(Chemical)) +
+  labs(x = "Porosity", y = "Mean NVP", 
+       title = "Porosity by Average NVP for Different Chemicals") +
+  ylim(0.025, 0.25)
+l2_small |> ggplot(aes(x = `Porosity%`, y = Mean_NVP, colour = `Porosity%`)) +
+  geom_boxplot() + scale_color_colorblind() +
+  facet_wrap(vars(Chemical)) +
+  labs(x = "Porosity", y = "Mean NVP", 
+       title = "Porosity by Average NVP for Different Chemicals") +
+  ylim(0.025, 0.25)
+
+# Analysis of frequency
+final_l2 |> ggplot(aes(x = freq, y = Mean_NVP, colour = `Porosity%`)) +
+  geom_point() + scale_color_colorblind()
+final_l2 |> ggplot(aes(x = freq, y = Mean_NVP, colour = Chemical)) +
+  geom_point() + scale_color_colorblind()
+```
+
+```{r}
+# Slopes vs. intercepts
+final_l2 |> ggplot(aes(x = Slope, y = Intercept, 
+                       colour = `Porosity%`)) + geom_point() +
+  labs(title = "Slopes vs. Intercepts")
+# df_121 <- final_df |> filter(Sample_ID == "121")
+# ggplot(data = df_121, aes(x = CycleCount, y = NVP, group = Sample_ID,
+#                      color = as.factor(Sample_ID))) +
+#   geom_line() + geom_point() + # Lines for each subject
+#   labs(title = "Spaghetti Plot", x = "Number of Squishes", y = "NVP",
+#        color = "ID")
+
+# Slopes vs other covariates
+gf_boxplot(Slope ~ `Porosity%`|Chemical, data = final_l2, outliers = F,
+           title = "Slope of NVP vs. Log of Cycle Count by Chemical Code and Porosity")
+gf_boxplot(Intercept ~ `Porosity%`|Chemical, data = final_l2, outliers = F,
+           title = "Initial NVP by Chemical Code and Porosity")
+gf_boxplot(Slope ~ Chemical, data = final_l2, outliers = F,
+           title = "Slope of NVP vs. Log of Cycle Count by Chemical Code")
+final_l2 |> ggplot(aes(x = freq*amp, y = Intercept, col = `Porosity%`)) +
+  geom_point() + labs(title = "Initial NVP by Strain Rate")
+final_l2 |> ggplot(aes(x = freq*amp, y = Slope, col = `Porosity%`)) +
+  geom_point() +
+  labs(title = "Slope of NVP vs. Log of Cycle Count by Strain Rate")
+final_l2 |> ggplot(aes(x = Stress_kPa, y = Slope, col = Chemical)) +
+  geom_point() +
+  labs(title = "Slope of NVP vs. Log of Cycle Count by Stress")
+final_l2 |> ggplot(aes(x = Stress_kPa, y = Intercept, col = Chemical)) +
+  geom_point() +
+  labs(title = "Initial NVP by Stress")
+```
+
+
+# Try some models
+
+```{r}
+nvp_model <- lmer(NVP ~ logCycleCount + freq + amp + freq:amp + Chemical +
+                    `Porosity%` + Chemical:`Porosity%` + Stress_kPa +
+                    (logCycleCount|Sample_ID), data = final_df)
+nvp_model2 <- lmer(NVP ~ logCycleCount + freq + amp + freq:amp + Chemical +
+                    `Porosity%` + Chemical:`Porosity%` + 
+                    (logCycleCount|Sample_ID), data = final_df)
+nvp_model3 <- lmer(NVP ~ logCycleCount + freq + amp + freq:amp + Chemical +
+                    `Porosity%` + 
+                    (logCycleCount|Sample_ID), data = final_df)
+nvp_model4 <- lmer(NVP ~ logCycleCount + freq + amp + Chemical +
+                    `Porosity%` + Chemical:`Porosity%` + 
+                    (logCycleCount|Sample_ID), data = final_df)
+nvp_model5 <- lmer(NVP ~ logCycleCount + freq + amp + Chemical +
+                    `Porosity%` + 
+                    (logCycleCount|Sample_ID), data = final_df)
+nvp_model6 <- lmer(NVP ~ logCycleCount + freq + amp + Chemical +
+                    `Porosity%` + 
+                    Chemical:logCycleCount +
+                    (logCycleCount|Sample_ID), data = final_df)
+nvp_model7 <- lmer(NVP ~ logCycleCount + freq + amp + Chemical +
+                    `Porosity%` + Chemical:`Porosity%` +
+                    Chemical:logCycleCount +
+                    (logCycleCount|Sample_ID), data = final_df)
+anova(nvp_model, nvp_model2, nvp_model3, nvp_model4, nvp_model5)
+anova(nvp_model5, nvp_model6, nvp_model7)
+summary(nvp_model6)
+```
+
+Emmeans plot (initial model):
+
+```{r}
+model_means <- emmeans(nvp_model, ~Chemical|`Porosity%`)
+plot(model_means, comparisons = T)
+```
+
+FINAL MODEL:
+
+```{r}
+final_model <- lmer(NVP ~ logCycleCount + freq + amp + Chemical +
+                    `Porosity%` + 
+                    Chemical:logCycleCount +
+                    (logCycleCount|Sample_ID), data = final_df)
+```
+
+
+
+Check conditions:
+
+```{r}
+plot(final_model, which = 1, ylab = "Residual", xlab = "Fitted Value")
+
+qqnorm(residuals(final_model), main = "Normal Q-Q Plot: Residuals")
+qqline(residuals(final_model), col = "red")
+
+qqnorm(ranef(final_model)$Sample_ID[[1]], 
+       main = "Normal Q-Q Plot: Intercept Random Effects")
+qqline(ranef(final_model)$Sample_ID[[1]], col = "red")
+
+qqnorm(ranef(final_model)$Sample_ID[[2]],
+       main = "Normal Q-Q Plot: Slope Random Effects")
+qqline(ranef(final_model)$Sample_ID[[2]], col = "red")
+```
+
