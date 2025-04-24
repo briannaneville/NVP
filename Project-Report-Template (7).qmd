@@ -1,6 +1,6 @@
 ---
-title: "Sample Report"
-author: 'Student A, Student B, Student C'
+title: "NVP Report"
+author: 'Brianna Neville, Curiosity Steen, Hye Jin Park, Michael Basanese'
 date: 'January 25, 2033'
 format: pdf
 ---
