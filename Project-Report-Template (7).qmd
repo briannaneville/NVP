@@ -33,21 +33,25 @@ library(tinytex)   # for example
 *Should be in paragraph from (not bullets).  Written for a 3rd party such as your client’s boss, or an external review board.  As part of your description, consider the following:*
 
 - *Type of study [Designed experiment, Observational study, Sample survey] and brief description of design*
+Designed experiment to squish foam. 
+
+
 - *Stage of the experiment [Planning stage or Analysis stage]*
+Analysis stage
+
 - *Objective of study and role of this analysis*
+To test foam for military helmets to absorb impact better.
+
 - *Scope of project*
 - *Intended use for results*
 
 ## 1.1 Research Questions
 
-
 *What are the overarching research questions that the client is targeting?*
 
-**Question 1:**  
+**Overarching Research Question:** How does stiffness, damping, and nonlinearity change over time and how can we predict this change?  
 
-**Question 2:**  
-
-*(order them by priority; RQ1 is highest priority)*
+**For us: **  Which factors in the data are linked to variations in non-linearity?
 
 ## 1.2 Variables
 
