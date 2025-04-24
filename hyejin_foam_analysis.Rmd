@@ -1,0 +1,199 @@
+---
+title: "foam_analysis"
+output: pdf_document
+date: "2025-04-21"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(readxl)
+library(tidyverse)
+library(dplyr)
+library(ggplot2)
+library(ggthemes)
+library(lme4)
+library(emmeans)
+```
+
+
+```{r}
+# load data
+foam_raw <- read_excel("Foster_Mines_Capstone_Data_v2.xlsx", sheet = "Sheet1")
+
+# decompose SampleCode
+foam_data <- foam_raw %>%
+  separate(SampleCode, into = c("prefix", "Chemical_Index", "Porosity", "Sample_ID"), sep = "_", remove = FALSE) %>%
+  select(-prefix)
+
+cyc_cols <- grep("^Cyc_", names(foam_data), value = TRUE)
+e1_cols <- grep("^E1_MPA_Cyc_", names(foam_data), value = TRUE)
+td_cols <- grep("^tandelta_Cyc_", names(foam_data), value = TRUE)
+es_cols <- grep("^Estatic_MPA_Cyc_", names(foam_data), value = TRUE)
+nvp_cols <- grep("^NVP_Cyc_", names(foam_data), value = TRUE)
+
+meta_cols <- setdiff(names(foam_data), c(cyc_cols, e1_cols, td_cols, es_cols, nvp_cols))
+
+# pivot data
+cyc_long <- foam_data %>%
+  select(SampleCode, all_of(cyc_cols)) %>%
+  pivot_longer(cols = all_of(cyc_cols),
+               names_to = "Cycle_Label",
+               values_to = "Cycle_Count")
+
+# E1
+e1_long <- foam_data %>%
+  select(SampleCode, all_of(e1_cols)) %>%
+  pivot_longer(cols = all_of(e1_cols),
+               names_to = "Cycle_Label",
+               values_to = "E1_MPA") %>%
+  mutate(Cycle_Label = str_replace(Cycle_Label, "E1_MPA_", ""))
+
+# tandelta
+td_long <- foam_data %>%
+  select(SampleCode, all_of(td_cols)) %>%
+  pivot_longer(cols = all_of(td_cols),
+               names_to = "Cycle_Label",
+               values_to = "tan_delta") %>%
+  mutate(Cycle_Label = str_replace(Cycle_Label, "tandelta_", ""))
+
+# Estatic
+es_long <- foam_data %>%
+  select(SampleCode, all_of(es_cols)) %>%
+  pivot_longer(cols = all_of(es_cols),
+               names_to = "Cycle_Label",
+               values_to = "Estatic_MPA") %>%
+  mutate(Cycle_Label = str_replace(Cycle_Label, "Estatic_MPA_", ""))
+
+# NVP
+nvp_long <- foam_data %>%
+  select(SampleCode, all_of(nvp_cols)) %>%
+  pivot_longer(cols = all_of(nvp_cols),
+               names_to = "Cycle_Label",
+               values_to = "NVP") %>%
+  mutate(Cycle_Label = str_replace(Cycle_Label, "NVP_", ""))
+
+# merge everything
+long_data <- cyc_long %>%
+  left_join(e1_long, by = c("SampleCode", "Cycle_Label")) %>%
+  left_join(td_long, by = c("SampleCode", "Cycle_Label")) %>%
+  left_join(es_long, by = c("SampleCode", "Cycle_Label")) %>%
+  left_join(nvp_long, by = c("SampleCode", "Cycle_Label"))
+
+# join with meta data
+foam_data <- foam_data %>%
+  select(all_of(meta_cols)) %>%
+  right_join(long_data, by = "SampleCode") %>%
+  mutate(
+    Chemical_Index = as.numeric(Chemical_Index),
+    Porosity = as.numeric(Porosity),
+    Sample_ID = as.numeric(Sample_ID),
+    Cycle = str_extract(Cycle_Label, "[A-N]$")
+  ) %>%
+  select(SampleCode, Chemical_Index, Porosity, Sample_ID,
+       Cycle, Cycle_Count,
+       strain, Stress_kPa, Relporo, freq, amp,
+       E1_MPA, tan_delta, Estatic_MPA, NVP)
+
+foam_data <- foam_data %>%
+  drop_na()
+
+foam_data <- foam_data %>%
+  rename(
+    Strain = strain,
+    Stress = Stress_kPa,
+    Freq = freq,
+    Amp = amp,
+    Dyn_Stiff = E1_MPA,
+    Stat_Stiff = Estatic_MPA,
+    Damping = tan_delta
+  )
+
+# create new normalized response variable
+foam_data <- foam_data %>%
+  group_by(SampleCode) %>%
+  mutate(
+    NVP_Initial = first(NVP[Cycle_Count == min(Cycle_Count, na.rm = TRUE)]),
+    NVP_Relative = NVP / NVP_Initial
+  ) %>%
+  ungroup()
+
+foam_data <- foam_data %>%
+  filter(Cycle_Count <= 10000, 
+         Damping >= 0,
+         !(Sample_ID == 133 & NVP > 0.1)
+         )
+
+foam_data <- foam_data %>%
+  mutate(Log_Cycle = ifelse(Cycle_Count == 0, 0, log(Cycle_Count)))
+
+```
+
+
+# Modeling
+
+
+```{r}
+foam_model <- lmer(NVP ~ Log_Cycle + Freq + Amp +
+                     as.factor(Chemical_Index) + as.factor(Porosity) + 
+                     Log_Cycle:as.factor(Chemical_Index) +
+                     (1 + Log_Cycle | Sample_ID), data = foam_data)
+
+summary(foam_model)
+```
+
+
+
+
+
+
+# Model conditions
+
+```{r}
+# residuals qq plot
+qqnorm(residuals(foam_model), main = "Residuals QQ-Plot")
+qqline(residuals(foam_model), col = "red")
+
+# random intercepts
+random_int_foam <- ranef(foam_model)$Sample_ID[,1]
+
+# random intercepts effects qq plot
+qqnorm(random_int_foam, main = "Random Intercepts QQ-Plot")
+qqline(random_int_foam, col = "red")
+
+# random slopes
+random_slopes_foam <- ranef(foam_model)$Sample_ID[,2]
+
+# random slopes effects qq plot
+qqnorm(random_slopes_foam, main = "Random Slopes QQ-Plot")
+qqline(random_slopes_foam, col = "red")
+
+# fitted values and residuals
+fitted_values <- fitted(foam_model)
+residuals <- residuals(foam_model)
+
+# residuals vs. fitted plot
+plot(fitted_values, residuals, 
+     xlab = "Fitted Values", 
+     ylab = "Residuals", 
+     main = "Residuals vs. Fitted Values")
+abline(h = 0, col = "red", lty = 2)
+```
+
+
+# Emmeans
+
+```{r}
+# chem index * porosity emmeans
+chemporo_means <- emmeans(foam_model, ~ Chemical_Index * Porosity)
+pairs(chemporo_means)
+plot(chemporo_means, comparisons = TRUE)
+```
+
+
+
+
+
+
