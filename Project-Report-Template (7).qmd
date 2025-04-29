@@ -251,20 +251,23 @@ The model equation is:
 
 $$
 \begin{aligned}
-\text{NVP}_{ij} =\ & a_i + b_i \log(\text{Cycle}_{ij}) + \epsilon_{ij}
+\text{NVP}_{ij} =\ & a_i + b_i (\log(\text{Cycle\_Count}_{ij})) + \epsilon_{ij}
 \end{aligned}
 $$
 
 $$
 \begin{aligned}
-a_i =\ & \alpha_0 + u_i + \alpha_1 \text{Freq}_{ij} + \alpha_2 \text{Amp}_{ij} \\\\
-& + \alpha_3 I(\text{ChemIndex}_{ij}) + \alpha_4 I(\text{Porosity}_{ij})
+a_i = \alpha_0 & + u_i \\
+& + \alpha_1 (\text{Freq}_{ij}) \\
+& + \alpha_2 (\text{Amp}_{ij}) \\
+& + \alpha_3 I(\text{Chemical\_Index}_{ij}) \\
+&  + \alpha_4 I(\text{Porosity}_{ij})
 \end{aligned}
 $$
 
 $$
 \begin{aligned}
-b_i =\ & \beta_0 + v_i + \beta_1 I(\text{ChemIndex}_{ij})
+b_i = \beta_0 & + v_i \\ & + \beta_1 I(\text{Chemical\_Index}_{ij})
 \end{aligned}
 $$
 
@@ -272,15 +275,15 @@ $$
 where:
 
 - $i$ indexes the foam sample and $j$ indexes the observation within a sample
-- $a_{i}$ and $b_{i}$ are the random intercept and slope
+- $a_{i}$ and $b_{i}$ are the overall intercept and slope for the model
 - $\alpha_{0}$ and $\beta_{0}$ are the global intercept and slope. In this case, the global intercept represents the initial NVP and the global slope represents the change in NVP as the logarithm of the cycle count increases by one.
 - $\epsilon_{ij} \sim N(0, \sigma_\varepsilon^2)$. The parameter $\sigma_\varepsilon^2$ represents the observation-to-observation variability within each sample.
-- $u_i$ and $v_i$ follow this distribution:
+- $u_i$ and $v_i$ are the random intercept and slope. They follow this distribution:
 $$
 \left( \begin{array}{c} u_i \\ v_i \end{array} \right) \sim N \left( \left(\begin{array}{c} 0 \\ 0 \end{array} \right), \left(\begin{array}{cc} \sigma_u^2 & \rho_{uv}\sigma_u\sigma_v \\ \rho_{uv}\sigma_u\sigma_v & \sigma_v^2 \end{array} \right) \right)
 $$
 - $\sigma_u^2$ represents the sample-to-sample variability in the initial NVP
-- \sigma_v^2$ represents the sample-to-sample variability in the rate of change in NVP with respect to the logarithm of cycle count
+- $\sigma_v^2$ represents the sample-to-sample variability in the rate of change in NVP with respect to the logarithm of cycle count
 - $\rho_{uv}$ represents the correlation between the initial NVP and the rate of change in NVP with respect to the log of cycle count
 
 
@@ -334,7 +337,7 @@ In our model, we assume linearity and normality of residuals and random effects.
 
 # 4. Recommendations 
 
-We recommend selecting foams with 81% porosity, as these materials consistently exhibited higher NVP values and are likely to provide better energy absorption in use. In addition, foams with a chemical index of 121 are preferred, since they showed better baseline performance and greater resistance to degradation across cycles. When designing or testing foams, mechanical loading conditions should match expected use. Higher cycling frequencies and larger amplitudes increased NVP, so testing should reflect realistic stress levels. It is also important to consider that chemical formulation affects how quickly NVP declines with repeated use.
+If you are interested in using foam samples with higher NVP, we recommend selecting foams with 81% porosity, as these materials consistently exhibited higher NVP values and are likely to provide better energy absorption in use. In addition, foams with a chemical index of 121 are preferred for higher NVP, since they showed better baseline performance and greater resistance to degradation across cycles. When designing or testing foams, mechanical loading conditions should match expected use. Higher cycling frequencies and larger amplitudes increased NVP, so testing should reflect realistic stress levels. It is also important to consider that chemical formulation affects how quickly NVP declines with repeated use.
 
 # 5. Resources 
 
