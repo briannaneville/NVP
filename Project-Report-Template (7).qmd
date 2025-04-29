@@ -15,15 +15,131 @@ rm(list = ls())
 knitr::opts_chunk$set(echo = FALSE)
 
 # packages
-library(tidyverse) # for example
-library(mosaic)    # for example
-library(ggformula) # for example
-library(car)       # for example
-library(tinytex)   # for example
+library(readxl)
+library(tidyverse)
+library(dplyr)
+library(ggplot2)
+library(ggthemes)
+library(lme4)
+library(emmeans)
+library(knitr)
+library(mosaic)
+library(ggformula)
+library(car)
+library(tinytex)
 
 # read in data 
 
 # use this space to do any data processing you need
+
+# load data
+foam_raw <- read_excel("Foster_Mines_Capstone_Data_v2.xlsx", sheet = "Sheet1")
+
+# decompose SampleCode
+foam_data <- foam_raw %>%
+  separate(SampleCode, into = c("prefix", "Chemical_Index", "Porosity", "Sample_ID"), sep = "_", remove = FALSE) %>%
+  select(-prefix)
+
+cyc_cols <- grep("^Cyc_", names(foam_data), value = TRUE)
+e1_cols <- grep("^E1_MPA_Cyc_", names(foam_data), value = TRUE)
+td_cols <- grep("^tandelta_Cyc_", names(foam_data), value = TRUE)
+es_cols <- grep("^Estatic_MPA_Cyc_", names(foam_data), value = TRUE)
+nvp_cols <- grep("^NVP_Cyc_", names(foam_data), value = TRUE)
+
+meta_cols <- setdiff(names(foam_data), c(cyc_cols, e1_cols, td_cols, es_cols, nvp_cols))
+
+# pivot data
+cyc_long <- foam_data %>%
+  select(SampleCode, all_of(cyc_cols)) %>%
+  pivot_longer(cols = all_of(cyc_cols),
+               names_to = "Cycle_Label",
+               values_to = "Cycle_Count")
+
+# E1
+e1_long <- foam_data %>%
+  select(SampleCode, all_of(e1_cols)) %>%
+  pivot_longer(cols = all_of(e1_cols),
+               names_to = "Cycle_Label",
+               values_to = "E1_MPA") %>%
+  mutate(Cycle_Label = str_replace(Cycle_Label, "E1_MPA_", ""))
+
+# tandelta
+td_long <- foam_data %>%
+  select(SampleCode, all_of(td_cols)) %>%
+  pivot_longer(cols = all_of(td_cols),
+               names_to = "Cycle_Label",
+               values_to = "tan_delta") %>%
+  mutate(Cycle_Label = str_replace(Cycle_Label, "tandelta_", ""))
+
+# Estatic
+es_long <- foam_data %>%
+  select(SampleCode, all_of(es_cols)) %>%
+  pivot_longer(cols = all_of(es_cols),
+               names_to = "Cycle_Label",
+               values_to = "Estatic_MPA") %>%
+  mutate(Cycle_Label = str_replace(Cycle_Label, "Estatic_MPA_", ""))
+
+# NVP
+nvp_long <- foam_data %>%
+  select(SampleCode, all_of(nvp_cols)) %>%
+  pivot_longer(cols = all_of(nvp_cols),
+               names_to = "Cycle_Label",
+               values_to = "NVP") %>%
+  mutate(Cycle_Label = str_replace(Cycle_Label, "NVP_", ""))
+
+# merge everything
+long_data <- cyc_long %>%
+  left_join(e1_long, by = c("SampleCode", "Cycle_Label")) %>%
+  left_join(td_long, by = c("SampleCode", "Cycle_Label")) %>%
+  left_join(es_long, by = c("SampleCode", "Cycle_Label")) %>%
+  left_join(nvp_long, by = c("SampleCode", "Cycle_Label"))
+
+# join with meta data
+foam_data <- foam_data %>%
+  select(all_of(meta_cols)) %>%
+  right_join(long_data, by = "SampleCode") %>%
+  mutate(
+    Chemical_Index = as.numeric(Chemical_Index),
+    Porosity = as.numeric(Porosity),
+    Sample_ID = as.numeric(Sample_ID),
+    Cycle = str_extract(Cycle_Label, "[A-N]$")
+  ) %>%
+  select(SampleCode, Chemical_Index, Porosity, Sample_ID,
+       Cycle, Cycle_Count,
+       strain, Stress_kPa, Relporo, freq, amp,
+       E1_MPA, tan_delta, Estatic_MPA, NVP)
+
+foam_data <- foam_data %>%
+  drop_na()
+
+foam_data <- foam_data %>%
+  rename(
+    Strain = strain,
+    Stress = Stress_kPa,
+    Freq = freq,
+    Amp = amp,
+    Dyn_Stiff = E1_MPA,
+    Stat_Stiff = Estatic_MPA,
+    Damping = tan_delta
+  )
+
+# create new normalized response variable
+foam_data <- foam_data %>%
+  group_by(SampleCode) %>%
+  mutate(
+    NVP_Initial = first(NVP[Cycle_Count == min(Cycle_Count, na.rm = TRUE)]),
+    NVP_Relative = NVP / NVP_Initial
+  ) %>%
+  ungroup()
+
+foam_data <- foam_data %>%
+  filter(Cycle_Count <= 10000, 
+         Damping >= 0,
+         !(Sample_ID == 133 & NVP > 0.1)
+         )
+
+foam_data <- foam_data %>%
+  mutate(Log_Cycle = ifelse(Cycle_Count == 0, 0, log(Cycle_Count)))
 
 ```
 
@@ -119,38 +235,80 @@ favstats(disp ~ cyl, data = mtcars) %>%
 
 # 3. Statistical Analysis 
 
-
-*Describe statistical analysis in terms that your client will be able to understand and perhaps use in presenting their own research.  This section should summarize all relevant analyses that lead to your final conclusions/decisions/recommendations, but should NEVER include visible code (folded code chunks are fine) or unformatted software output.*
-
-- *Model Assumptions & how checked/verified (details left to appendix)*
-- *Interpretation of estimates/statistics/p-values IN CONTEXT*
-- *Enough detail that the model/analysis could be reproduced by another statistician*
-
-Look at @fig-example2 to see what figure with subfigures looks like.
-
-```{r}
-#| label: fig-example2
-#| layout-ncol: 2
-#| fig-cap: "A figure with two subfigures!"
-#| fig-subcap:  
-#|   - "Line Plot 1"
-#|   - "Line Plot 2"
-
-
-plot(cars)
-plot(pressure)
+```{r, echo=FALSE}
+foam_model <- lmer(NVP ~ Log_Cycle + Freq + Amp +
+                     as.factor(Chemical_Index) + as.factor(Porosity) + 
+                     Log_Cycle:as.factor(Chemical_Index) +
+                     (1 + Log_Cycle | Sample_ID), data = foam_data)
 ```
 
 
+To investigate the factors affecting the nonlinear viscoelastic parameter (NVP) of helmet foams, we used a **linear mixed effects model**. This approach allowed us to account for the repeated measurements collected from the same foam samples over time. The model selection was finalized by conducting a likelihood ratio tests comparing models with and without different interaction terms, and the final model was selected based on significant improvement in fit and overall simplicity.
+
+The model has **fixed effects** for the logarithm of cycle count, frequency, amplitude, chemical index, porosity, and an interaction between log(cycle) and chemical index. The **random effects** for foam sample ID allows both the baseline NVP and the effect of cycling to vary between samples.
+
+The model equation is:
+
+$$
+\begin{aligned}
+\text{NVP}_{ij} =\ & a_i + b_i \log(\text{Cycle}_{ij}) + \beta_2 \text{Freq}_{ij} + \beta_3 \text{Amp}_{ij} \\\\
+& + \beta_4 \text{ChemIndex}_{ij} + \beta_5 \text{Porosity}_{ij} \\\\
+& + \beta_6 \log(\text{Cycle}_{ij}) \times \text{ChemIndex}_{ij} + \epsilon_{ij}
+\end{aligned}
+$$
+
+$$
+a_i = \alpha_0 + u_i
+$$
+
+$$
+b_i = \beta_0 + v_i
+$$
+
+
+where:
+
+- $i$ indexes the foam sample and $j$ indexes the observation within a sample
+- $\alpha_{0}$ and $\beta_{0}$ are the global intercept and slope
+- $u_{i}$ and $v_{i}$ are the random intercept and slope
+- $\epsilon_{ij} \sim N(0, \sigma^2)$.
+
+
+### Key Results
+
+The model coefficients are summarized in the table below.
+
+```{r, echo=FALSE}
+#| label: tbl-foam-model
+#| tbl-cap: "Fixed Effect Estimates and t-values for NVP Model"
+
+foam_model_table <- data.frame(
+  Term = c("(Intercept)", "Log(Cycle)", "Frequency", "Amplitude", 
+           "Chemical Index = 100", "Chemical Index = 121", "Porosity = 81%", 
+           "Log(Cycle) × Chemical Index=100", "Log(Cycle) × Chemical Index=121"),
+  Estimate = c(0.00823, 0.00030, 0.00121, 1.40689, 0.00636, 0.02025, 0.02384, 0.00104, 0.00066),
+  Std_Error = c(0.00567, 0.00021, 0.00036, 0.15047, 0.00590, 0.00468, 0.00429, 0.00038, 0.00030),
+  t_value = c(1.452, 1.442, 3.334, 9.350, 1.078, 4.322, 5.560, 2.734, 2.183)
+)
+
+kable(foam_model_table, digits = 3)
+```
+
+Variables with t-values greater than the absolute value of 2 are considered statistically significant.
+
+### Interpretation of Results
+
+- **Amplitude**: Foams tested at larger amplitudes had higher NVP values, meaning they became more resistant under greater amounts of compression.
+- **Frequency**: Higher frequencies led to slightly higher NVP values, indicating that faster cycling increases foam resistance.
+- **Porosity**: Foams with 81% porosity showed significantly higher NVP than those with 71% porosity.
+- **Chemical Index**: Foams with chemical index 121 performed better in terms of maintaining higher NVP compared to chemical index 79.
+- **Interaction**: The rate at which NVP changed with cycling depended on the foam’s chemical index. Foams with higher chemical indices tended to maintain higher NVP levels over more cycles.
+
+The model assumptions were reasonably met and the diagnostic plots can be found in the Appendix.
+
 # 4. Recommendations 
 
-*Succinct response to each question laid out in 1.2.  This a much shorter version of section 3, and focuses on conclusions rather than the analyses.*
-
-**Question 1:**  
-
-**Question 2:**  
-
-*(all research questions in 1.1 and/or statistical question in 1.2 should be addressed, in the same order)*
+We recommend selecting foams with 81% porosity, as these materials consistently exhibited higher NVP values and are likely to provide better energy absorption in use. In addition, foams with a chemical index of 121 are preferred, since they showed better baseline performance and greater resistance to degradation across cycles. When designing or testing foams, mechanical loading conditions should match expected use. Higher cycling frequencies and larger amplitudes increased NVP, so testing should reflect realistic stress levels. It is also important to consider that chemical formulation affects how quickly NVP declines with repeated use.
 
 # 5. Resources 
 
