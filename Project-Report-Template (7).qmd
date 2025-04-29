@@ -1,7 +1,7 @@
 ---
 title: "NVP Report"
 author: 'Brianna Neville, Curiosity Steen, Hye Jin Park, Michael Basanese'
-date: 'January 25, 2033'
+date: '`r Sys.Date()`'
 format: pdf
 ---
 
@@ -251,27 +251,37 @@ The model equation is:
 
 $$
 \begin{aligned}
-\text{NVP}_{ij} =\ & a_i + b_i \log(\text{Cycle}_{ij}) + \beta_2 \text{Freq}_{ij} + \beta_3 \text{Amp}_{ij} \\\\
-& + \beta_4 \text{ChemIndex}_{ij} + \beta_5 \text{Porosity}_{ij} \\\\
-& + \beta_6 \log(\text{Cycle}_{ij}) \times \text{ChemIndex}_{ij} + \epsilon_{ij}
+\text{NVP}_{ij} =\ & a_i + b_i \log(\text{Cycle}_{ij}) + \epsilon_{ij}
 \end{aligned}
 $$
 
 $$
-a_i = \alpha_0 + u_i
+\begin{aligned}
+a_i =\ & \alpha_0 + u_i + \alpha_1 \text{Freq}_{ij} + \alpha_2 \text{Amp}_{ij} \\\\
+& + \alpha_3 I(\text{ChemIndex}_{ij}) + \alpha_4 I(\text{Porosity}_{ij})
+\end{aligned}
 $$
 
 $$
-b_i = \beta_0 + v_i
+\begin{aligned}
+b_i =\ & \beta_0 + v_i + \beta_1 I(\text{ChemIndex}_{ij})
+\end{aligned}
 $$
 
 
 where:
 
 - $i$ indexes the foam sample and $j$ indexes the observation within a sample
-- $\alpha_{0}$ and $\beta_{0}$ are the global intercept and slope
-- $u_{i}$ and $v_{i}$ are the random intercept and slope
-- $\epsilon_{ij} \sim N(0, \sigma^2)$.
+- $a_{i}$ and $b_{i}$ are the random intercept and slope
+- $\alpha_{0}$ and $\beta_{0}$ are the global intercept and slope. In this case, the global intercept represents the initial NVP and the global slope represents the change in NVP as the logarithm of the cycle count increases by one.
+- $\epsilon_{ij} \sim N(0, \sigma_\varepsilon^2)$. The parameter $\sigma_\varepsilon^2$ represents the observation-to-observation variability within each sample.
+- $u_i$ and $v_i$ follow this distribution:
+$$
+\left( \begin{array}{c} u_i \\ v_i \end{array} \right) \sim N \left( \left(\begin{array}{c} 0 \\ 0 \end{array} \right), \left(\begin{array}{cc} \sigma_u^2 & \rho_{uv}\sigma_u\sigma_v \\ \rho_{uv}\sigma_u\sigma_v & \sigma_v^2 \end{array} \right) \right)
+$$
+- $\sigma_u^2$ represents the sample-to-sample variability in the initial NVP
+- \sigma_v^2$ represents the sample-to-sample variability in the rate of change in NVP with respect to the logarithm of cycle count
+- $\rho_{uv}$ represents the correlation between the initial NVP and the rate of change in NVP with respect to the log of cycle count
 
 
 ### Key Results
@@ -296,7 +306,23 @@ kable(foam_model_table, digits = 3)
 
 Variables with t-values greater than the absolute value of 2 are considered statistically significant.
 
+Also, we find that $\hat{\sigma}_u^2 = 3.068e-4$, $\hat{\sigma}_v^2 = 1.222e-6$, $\hat{\sigma}_\varepsilon^2 = 6.852e-6$, and $\rho_{uv} = 0.22$. Since $\hat{\sigma}_u^2$ is much greater than $\hat{\sigma}_v^2$ and $\hat{\sigma}_\varepsilon^2$, most variability in NVP can be attributed to differences in initial NVP between samples. Also, since $\rho_{uv}$ is somewhat small, there is not much correlation between initial NVP and cycle-over-cycle change in NVP.
+
 ### Interpretation of Results
+
+We first discuss the meanings of each coefficient estimate:
+
+- Intercept: The expected initial NVP for a sample with chemical index 79, initial porosity of 71%, and a frequency and amplitude of 0 is 0.00823.
+- Log(Cycle): Samples with chemical index 79 have an estimated average rate of change in NVP of 0.00030 units per increase of one in log(Cycle).
+- Frequency: Holding amplitude, chemical index, and initial porosity constant, as frequency increases by one, the expected initial NVP increases by 0.00121.
+- Amplitude: Holding frequency, chemical index, and initial porosity constant, as amplitude increases by one, the expected initial NVP increases by 1.40689.
+- Chemical Index = 100: Holding frequency, amplitude, and initial porosity constant, expected initial NVP is 0.00636 units greater for samples with chemical index 100 than for samples with chemical index 79.
+- Chemical Index = 121: Holding frequency, amplitude, and initial porosity constant, expected initial NVP is 0.02025 units greater for samples with chemical index 121 than for samples with chemical index 79.
+- Porosity = 81%: Holding frequency, amplitude, and chemical index constant, expected initial NVP is 0.02384 units greater for samples with an initial porosity of 81% than for samples with an initial porosity of 71%.
+- Log(Cycle) × Chemical Index=100: The estimated average rate of change in NVP per increase of one in log(Cycle) is 0.00104 units higher for samples with chemical index 100 than for samples with chemical index 79.
+- Log(Cycle) × Chemical Index=121: The estimated average rate of change in NVP per increase of one in log(Cycle) is 0.00066 units higher for samples with chemical index 121 than for samples with chemical index 79.
+
+We come away with the following conclusions for the effects of the variables in the model on NVP:
 
 - **Amplitude**: Foams tested at larger amplitudes had higher NVP values, meaning they became more resistant under greater amounts of compression.
 - **Frequency**: Higher frequencies led to slightly higher NVP values, indicating that faster cycling increases foam resistance.
@@ -304,7 +330,7 @@ Variables with t-values greater than the absolute value of 2 are considered stat
 - **Chemical Index**: Foams with chemical index 121 performed better in terms of maintaining higher NVP compared to chemical index 79.
 - **Interaction**: The rate at which NVP changed with cycling depended on the foam’s chemical index. Foams with higher chemical indices tended to maintain higher NVP levels over more cycles.
 
-The model assumptions were reasonably met and the diagnostic plots can be found in the Appendix.
+In our model, we assume linearity and normality of residuals and random effects. The model assumptions were reasonably met and the diagnostic plots can be found in the Appendix.
 
 # 4. Recommendations 
 
