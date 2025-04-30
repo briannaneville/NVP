@@ -236,6 +236,7 @@ favstats(disp ~ cyl, data = mtcars) %>%
 # 3. Statistical Analysis 
 
 ```{r, echo=FALSE}
+#| label: model-code
 foam_model <- lmer(NVP ~ Log_Cycle + Freq + Amp +
                      as.factor(Chemical_Index) + as.factor(Porosity) + 
                      Log_Cycle:as.factor(Chemical_Index) +
@@ -257,34 +258,38 @@ $$
 
 $$
 \begin{aligned}
-a_i = \alpha_0 & + u_i \\
-& + \alpha_1 (\text{Freq}_{ij}) \\
+a_i = \alpha_0 & + \alpha_1 (\text{Freq}_{ij}) \\
 & + \alpha_2 (\text{Amp}_{ij}) \\
-& + \alpha_3 I(\text{Chemical\_Index}_{ij}) \\
-&  + \alpha_4 I(\text{Porosity}_{ij})
+& + \alpha_3 I(\text{Chemical\_Index}_{ij} = 100) \\
+& + \alpha_4 I(\text{Chemical\_Index}_{ij} = 121) \\
+&  + \alpha_5 I(\text{Porosity}_{ij} = 81) \\
+& + u_i
 \end{aligned}
 $$
 
 $$
 \begin{aligned}
-b_i = \beta_0 & + v_i \\ & + \beta_1 I(\text{Chemical\_Index}_{ij})
+b_i = \beta_0 & + \beta_1 I(\text{Chemical\_Index}_{ij} = 100) \\
+& + \beta_2 I(\text{Chemical\_Index}_{ij} = 121) \\
+& + v_i
 \end{aligned}
 $$
-
 
 where:
 
 - $i$ indexes the foam sample and $j$ indexes the observation within a sample
-- $a_{i}$ and $b_{i}$ are the overall intercept and slope for the model
-- $\alpha_{0}$ and $\beta_{0}$ are the global intercept and slope. In this case, the global intercept represents the initial NVP and the global slope represents the change in NVP as the logarithm of the cycle count increases by one.
+- $a_{i}$ and $b_{i}$ are the intercept and slope for foam sample i
+- $\alpha_{0}$ and $\beta_{0}$ are the global intercept and slope when the chemical index is 79, the porosity is 71%, and the frequency and amplitude are zero. In this case, the global intercept represents the initial NVP and the global slope represents the change in NVP as the logarithm of the cycle count increases by one.
+- $\alpha_{1}$ through $\alpha_{5}$ represent the effects of frequency, amplitude, chemical type, and porosity on initial NVP.
+- $\beta_1$ and $\beta_2$ represent the effect of different chemical types compared to the baseline of 79 on the rate of change of NVP over cycle count. 
 - $\epsilon_{ij} \sim N(0, \sigma_\varepsilon^2)$. The parameter $\sigma_\varepsilon^2$ represents the observation-to-observation variability within each sample.
-- $u_i$ and $v_i$ are the random intercept and slope. They follow this distribution:
+- $u_i$ and $v_i$ are the random intercept and slope. They allow each foam sample to have its own slope and intercept. They follow this distribution:
 $$
 \left( \begin{array}{c} u_i \\ v_i \end{array} \right) \sim N \left( \left(\begin{array}{c} 0 \\ 0 \end{array} \right), \left(\begin{array}{cc} \sigma_u^2 & \rho_{uv}\sigma_u\sigma_v \\ \rho_{uv}\sigma_u\sigma_v & \sigma_v^2 \end{array} \right) \right)
 $$
 - $\sigma_u^2$ represents the sample-to-sample variability in the initial NVP
 - $\sigma_v^2$ represents the sample-to-sample variability in the rate of change in NVP with respect to the logarithm of cycle count
-- $\rho_{uv}$ represents the correlation between the initial NVP and the rate of change in NVP with respect to the log of cycle count
+- $\rho_{uv}$ represents the correlation between the initial NVP and the rate of change in NVP with respect to the log of cycle count for each sample
 
 
 ### Key Results
@@ -316,14 +321,14 @@ Also, we find that $\hat{\sigma}_u^2 = 3.068e-4$, $\hat{\sigma}_v^2 = 1.222e-6$,
 We first discuss the meanings of each coefficient estimate:
 
 - Intercept: The expected initial NVP for a sample with chemical index 79, initial porosity of 71%, and a frequency and amplitude of 0 is 0.00823.
-- Log(Cycle): Samples with chemical index 79 have an estimated average rate of change in NVP of 0.00030 units per increase of one in log(Cycle).
+- Log(Cycle): Samples with chemical index 79 have an estimated average rate of change in NVP of 0.00030 units per increase of one in log(Cycle), after accounting for porosity, frequency, and amplitude.
 - Frequency: Holding amplitude, chemical index, and initial porosity constant, as frequency increases by one, the expected initial NVP increases by 0.00121.
 - Amplitude: Holding frequency, chemical index, and initial porosity constant, as amplitude increases by one, the expected initial NVP increases by 1.40689.
 - Chemical Index = 100: Holding frequency, amplitude, and initial porosity constant, expected initial NVP is 0.00636 units greater for samples with chemical index 100 than for samples with chemical index 79.
 - Chemical Index = 121: Holding frequency, amplitude, and initial porosity constant, expected initial NVP is 0.02025 units greater for samples with chemical index 121 than for samples with chemical index 79.
 - Porosity = 81%: Holding frequency, amplitude, and chemical index constant, expected initial NVP is 0.02384 units greater for samples with an initial porosity of 81% than for samples with an initial porosity of 71%.
-- Log(Cycle) × Chemical Index=100: The estimated average rate of change in NVP per increase of one in log(Cycle) is 0.00104 units higher for samples with chemical index 100 than for samples with chemical index 79.
-- Log(Cycle) × Chemical Index=121: The estimated average rate of change in NVP per increase of one in log(Cycle) is 0.00066 units higher for samples with chemical index 121 than for samples with chemical index 79.
+- Log(Cycle) × Chemical Index=100: The estimated average rate of change in NVP per increase of one in log(Cycle) is 0.00104 units higher for samples with chemical index 100 than for samples with chemical index 79, after accounting for porosity, frequency, and amplitude.
+- Log(Cycle) × Chemical Index=121: The estimated average rate of change in NVP per increase of one in log(Cycle) is 0.00066 units higher for samples with chemical index 121 than for samples with chemical index 79, after accounting for porosity, frequency, and amplitude.
 
 We come away with the following conclusions for the effects of the variables in the model on NVP:
 
@@ -332,6 +337,49 @@ We come away with the following conclusions for the effects of the variables in 
 - **Porosity**: Foams with 81% porosity showed significantly higher NVP than those with 71% porosity.
 - **Chemical Index**: Foams with chemical index 121 performed better in terms of maintaining higher NVP compared to chemical index 79.
 - **Interaction**: The rate at which NVP changed with cycling depended on the foam’s chemical index. Foams with higher chemical indices tended to maintain higher NVP levels over more cycles.
+
+@fig-model-predictions shows model predictions by cycle count for a group of simulated samples with a chosen frequency and amplitude and different combinations of chemical index and porosity. According to our model, foam samples with 81% porosity have higher predicted NVP. Also, foams with chemical index 121 show the highest predicted NVP, while foams with chemical index 79 show the lowest predicted NVP. Also, the predicted rate of increase in NVP for foams with chemical index 79 is lower than the rates of increase for foams with chemical indices 100 and 121. 
+
+```{r}
+#| label: fig-model-predictions
+#| echo: false
+#| fig-cap: "Model predictions at a frequency of 15 and an amplitude of 0.024, for simulated samples with different combinations of chemical index and porosity."
+#| fig-pos: "H"
+#| fig-align: "center"
+#| fig-width: 7
+#| fig-height: 4
+
+# Fit the model at a fixed frequency and amplitude for each chemical index
+
+# Generate the data
+Cycle_Count <- rep(c(0, seq(from = 2000, to = 10000, by = 1000)), 6)
+Freq <- rep(15, 60)
+Amp <- rep(round(median(foam_data$Amp), 3), 60)
+Porosity <- c(rep(71, 30), rep(81, 30))
+Chemical_Index <- c(rep(79, 10), rep(100, 10), rep(121, 10),
+                    rep(79, 10), rep(100, 10), rep(121, 10))
+Sample_ID <- c(rep(200, 10), rep(201, 10), rep(202, 10), rep(203, 10),
+               rep(204, 10), rep(205, 10))
+newdata <- as.data.frame(cbind(Cycle_Count, Freq, Amp, Porosity, 
+                               Chemical_Index, Sample_ID))
+newdata <- newdata %>%
+  mutate(Log_Cycle = ifelse(Cycle_Count == 0, 0, log(Cycle_Count)))
+
+# Get model predictions for each simulated sample
+NVP_pred <- predict(foam_model, newdata, allow.new.levels = T)
+data_to_plot <- cbind(newdata, NVP_pred)
+
+# Plot the predictions over cycle count (number of squishes)
+ggplot(data = data_to_plot, aes(x = Cycle_Count, y = NVP_pred, 
+                     color = as.factor(Chemical_Index))) +
+  geom_line() + geom_point() + # Lines for each subject
+  labs(title = 
+         "Model Predictions over Cycle Count at a Set Frequency and Amplitude", 
+       x = "Number of Squishes", y = "NVP", 
+       subtitle = "Frequency = 15, Amplitude = 0.024",
+       color = "Chemical Index") +
+  facet_grid(. ~ as.factor(Porosity) )
+```
 
 In our model, we assume linearity and normality of residuals and random effects. The model assumptions were reasonably met and the diagnostic plots can be found in the Appendix.
 
@@ -356,7 +404,7 @@ If you are interested in using foam samples with higher NVP, we recommend select
 
 
 ### R Script
-```{r ref.label=c('front-matter', 'fig-example1','tbl-summarystats', 'fig-example2')}
+```{r ref.label=c('front-matter', 'fig-example1','tbl-summarystats', 'fig-example2', 'model-code', 'tbl-foam-model', 'fig-model-predictions')}
 #| echo: true
 #| eval: false
 
