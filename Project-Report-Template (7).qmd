@@ -448,6 +448,7 @@ abline(h = 0, col = "red", lty = 2)
 
 ```
 
+**Random Effects**
 
 ```{r}
 #| label: tbl-random-effects
