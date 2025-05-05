@@ -389,7 +389,7 @@ If you are interested in using foam samples with higher NVP, we recommend select
 
 # 5. Resources 
 
-*List resources that your client might find useful*
+Information on mixed models: “Beyond Multiple Linear Regression: Applied Generalized Linear Models and Multilevel Models in R” by Paul Roback and Julie Legler
 
 # 6. Additional Considerations
 
