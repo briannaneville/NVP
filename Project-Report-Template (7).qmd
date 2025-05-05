@@ -297,7 +297,7 @@ $$
 The model coefficients are summarized in the table below.
 
 ```{r, echo=FALSE}
-#| label: tbl-foam-model
+#| label: tbl-fixed-effects
 #| tbl-cap: "Fixed Effect Estimates and t-values for NVP Model"
 
 foam_model_table <- data.frame(
@@ -404,11 +404,69 @@ These limitations should be considered when interpreting the results or extendin
 
 # Technical Appendix  
 
-*Detailed information and a copy of code and or software results.  Additional graphs and supporting figures may also be placed in the appendix.*
+**Mixed Effects Model Diagnostic Plots**
+
+```{r}
+#| label: fig-diagnostics
+#| layout-ncol: 2
+#| fig-cap: "Diagnostic plots for the Helmet Foam model"
+#| fig-subcap:
+#|  - "QQ Plot of Residuals"
+#|  - "QQ Plot of Random Intercepts"
+#|  - "QQ Plot of Random Slopes"
+#|  - "Residuals vs Fitted Values"
+#| fig-pos: "H"
+
+# random intercepts
+random_int_foam <- ranef(foam_model)$Sample_ID[,1]
+
+# random slopes
+random_slopes_foam <- ranef(foam_model)$Sample_ID[,2]
+
+# fitted values and residuals
+fitted_values <- fitted(foam_model)
+residuals <- residuals(foam_model)
+
+# residuals qq plot
+qqnorm(residuals(foam_model), main = "Residuals QQ-Plot")
+qqline(residuals(foam_model), col = "red")
+
+# random intercepts effects qq plot
+qqnorm(random_int_foam, main = "Random Intercepts QQ-Plot")
+qqline(random_int_foam, col = "red")
+
+# random slopes effects qq plot
+qqnorm(random_slopes_foam, main = "Random Slopes QQ-Plot")
+qqline(random_slopes_foam, col = "red")
+
+# residuals vs. fitted plot
+plot(fitted_values, residuals, 
+     xlab = "Fitted Values", 
+     ylab = "Residuals", 
+     main = "Residuals vs. Fitted Values")
+abline(h = 0, col = "red", lty = 2)
+
+```
+
+
+```{r}
+#| label: tbl-random-effects
+#| tbl-cap: "Random Effect Variance and Correlation Estimates for Helmet Foam Model"
+
+random_effects_table <- data.frame(
+  Group = c("Sample_ID", "Sample_ID", "Residual"),
+  Effect = c("Intercept", "Log(Cycle)", "—"),
+  Variance = c(3.068e-04, 1.222e-06, 6.852e-06),
+  Std_Dev = c(0.01752, 0.00111, 0.00262),
+  Correlation = c(NA, 0.22, NA)
+)
+
+kable(random_effects_table, digits = 5)
+```
 
 
 ### R Script
-```{r ref.label=c('front-matter', 'fig-example1','tbl-summarystats', 'fig-example2', 'model-code', 'tbl-foam-model', 'fig-model-predictions')}
+```{r ref.label=c('front-matter', 'fig-example1','tbl-summarystats', 'fig-example2', 'model-code', 'tbl-fixed-effects', 'tbl-random-effects', 'fig-model-predictions')}
 #| echo: true
 #| eval: false
 
