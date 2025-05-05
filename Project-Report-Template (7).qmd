@@ -393,9 +393,13 @@ If you are interested in using foam samples with higher NVP, we recommend select
 
 # 6. Additional Considerations
 
-- *Limitations to the recommendations*
-- *Concerns you may have about the study; suggestions for similar studies in future*
-- *Technical comments*
+While this analysis provides valuable insights into the degradation behavior of helmet foam materials, several limitations and considerations should be noted:
+
+- **Generalizability:** The findings are limited to the specific combinations of Chemical Index and Porosity that were in this dataset. Additional combinations or a broader chemical spectrum could reveal new patterns or interaction effects not captured here.
+- **Sample Size and Balance:** Although there were repeated measurements per sample, the number of unique sample IDs per group varied. Some interaction combinations were underrepresented, potentially affecting the precision and stability of those fixed effect estimates.
+- **Measurement Variability:** Small standard deviations in the random effects suggest that most of the variation in NVP occurs at the fixed-effect level. However, residual noise remains and may reflect unmeasured factors such as ambient temperature or differing machine calibrations during testing.
+
+These limitations should be considered when interpreting the results or extending the model to new material types or testing conditions.
   
 
 # Technical Appendix  
