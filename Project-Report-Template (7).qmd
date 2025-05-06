@@ -175,7 +175,7 @@ Our group was tasked with analyzing NVP, which quantifies the time-dependent, no
 
 ## 1.2 Variables
 
-*What is (are) possible explanatory and response variables?  Relevant notes about how each is measured/recorded.*
+The response variable we are investigating is non-linear viscous parameter. There are several possible parameters.
 
 *A table is recommended here. *
 
