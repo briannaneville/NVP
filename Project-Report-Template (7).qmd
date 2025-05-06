@@ -391,6 +391,8 @@ If you are interested in using foam samples with higher NVP, we recommend select
 
 Information on mixed models: “Beyond Multiple Linear Regression: Applied Generalized Linear Models and Multilevel Models in R” by Paul Roback and Julie Legler
 
+Information on non-linear viscoelasticity: "Creep and fatigue of natural fibre composites" by M. Misra, S.S. Ahankari, and A.K. Mohanty. https://www.sciencedirect.com/science/article/abs/pii/B9781845697426500113 
+
 # 6. Additional Considerations
 
 While this analysis provides valuable insights into the degradation behavior of helmet foam materials, several limitations and considerations should be noted:
