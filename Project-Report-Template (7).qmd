@@ -175,12 +175,24 @@ Our group was tasked with analyzing NVP, which quantifies the time-dependent, no
 
 ## 1.2 Variables
 
-The response variable we are investigating is non-linear viscous parameter. There are several possible parameters.
+The response variable we are investigating is non-linear viscous parameter. There parameters we used in our model are listed below.
 
-*A table is recommended here. *
-
-
-*If design is complex, here is a good place to write a detailed description.*
+```{r}
+library(kableExtra)
+#| label: tbl-variables
+#| echo: false
+#| tbl-cap: "Summary of Variables Used in Analysis"
+#| 
+variable.desc <- data.frame(Name = c("Cycle", "Frequency", "Amplitude", "Chemical Index", "Porosity"))
+variable.desc$Type <- c("Categorical", "Numerical", "Numerical","Categorical","Categorical")
+variable.desc$Notes <- c("Count at which data is taken", "The times the foam is squished over a time period", "The height of a squish", "The type of foam used (79, 100, 121", "High (71%), Low (81%)")
+knitr::kable(variable.desc, format = "latex", booktabs = TRUE,
+             col.names = c("Name", "Type", "Notes"),
+             longtable = FALSE) %>%
+  kable_styling( full_width = FALSE) %>%
+  column_spec(3, width = "8cm") %>% 
+  add_header_above(c(" " = 3))
+```
 
 #  2. Exploratory Data Analysis (EDA)
 
