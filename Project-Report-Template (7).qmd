@@ -146,36 +146,24 @@ foam_data <- foam_data %>%
 
 ## 1. Project Description
 
-*Should be in paragraph from (not bullets).  Written for a 3rd party such as your client’s boss, or an external review board.  As part of your description, consider the following:*
+Navy helmets must provide long-term protection across extreme temperatures. The current foam in the helmets fails under cold weather conditions, so the NNSA has commissioned researchers to test alternatives. Navy personnel receive one helmet for their entire career in the military. After basic training, the helmet receives a lot of impact and shocks, which degrades the material and reduces its ability to protect under stress. The glass transition temperature for the current foam is 10℃ at which the foam becomes stiff and hard. At lower temperatures, the helmets are not able to withstand substantial impact and give needed protection. A foam needs to be created that is stable across temperatures and can withstand impact over several years. 
 
-The NNSA is researching new foams to put into Navy helmets. 
-Navy personel receive one helmet for their uniform for their entire career in the military. After basic training, the helmet receives a lot of impact, and the helmet takes shocks. Currently, at 10C, the glass transition temp - foam becomes stiff and hard. It performs better when warm. Foam is better energy absorption when its warm. Need to create a foam to be stable across temperatures. There's a comfort layer and firm layer of foam in the helmet. Dr. Moira Foster is tracking the viscoelastic (short term effect) and damage (long term effect) of several different foams.
+Dr. Moira Foster researched six types of foams for their short term and long term effects over time. Similar to memory foam, the material exhibits time-dependent recovery after deformation. She used a 2 X 3 factorial design to observe six different foams. There are three different chemical compounds of foams - 79, 100, 121.  The 79 foam is the most stiff, and 121 is the least stiff of the foams. There are two densities of foam - high porosity (71% air) and low porosity (81% air). Dr. Foster was interested to see how the chemical composition and porosity affect the foam.
 
-Changes in material: viscoelastic (short term) and damage (long term). This is what she's tracking. The foams have several different measures:
- - Visco (dampling)
- - Elastic (how squishy it is and bounce back)
-The foam is in essence like a memory foam pillow.
+```{r, echo=FALSE}
+library(knitr)
+chemical_index <- c(79, 79, 100, 100, 121, 121)
+porosity <- c(71, 81, 71, 81, 71, 81)
 
-She also is observing two densities of foam high (71% air) and low (81% air) porosity. She wants to see how chemical index and porosity affects the foam. There are 6 different foams total to test.
+my_matrix <- as.matrix(cbind(chemical_index, porosity))
 
-Each foam was intially squished for 120 seconds, and then continuous squishes at certian frequencies and amplitudes determined by Dr. Foster. Sinusoidal squishes. The stress, strain, and relative porosity measured at the beginning of the experiement were also chosen by Dr. Foster and the physical constraints of the foams. After a certain amount of cycles, Dr. Foster measured damping, dynamic elasticity, static elasticicy, and non-linearity.
+kable(my_matrix, caption = "Table of Foam")
+```
 
-Want to predict how the effects of the foam change over time with various strains, stresses. 
+Dr. Foster used a hydraulic machine to squish the foam and collect data. Because of the physical constraints of the foam, she picked the stress, strain, frequency, and amplitude the machine would run. The foam was initially pressed for 120 seconds to reach a certain relative porosity, and then the machine ran sinusoidally over time. At certain cycle counts data was collected on damping, dynamic elasticity, static elasticity, and non-linear viscous parameter (NVP). 
 
-We were specifically tasked with investigating nonlinear viscous parameter (NVP). Only five papers have been published regarding this parameter. As nonlinearity increases, stiffness compression decreases. 
+Our group was tasked with analyzing NVP, which quantifies the time-dependent, non-recoverable deformation of a material under cyclic stress. Many materials that have deformations display linear viscoelastic behavior (). The theory of linear viscosity states that there is a mathematical relationship between stress, strain, and time in regards to degradation of the material. The theory for linear viscosity does not include a wide range of temperatures, stresses, and strains because nonlinear viscosity is observed at extremes. Ultimately, NVP is measuring how the foam responds to stress over time and how the material degrades. Higher NVP is associated with faster material degradation.
 
-- *Type of study [Designed experiment, Observational study, Sample survey] and brief description of design*
-Designed experiment to squish foam. 
-
-
-- *Stage of the experiment [Planning stage or Analysis stage]*
-Analysis stage
-
-- *Objective of study and role of this analysis*
-To test foam for military helmets to absorb impact better.
-
-- *Scope of project*
-- *Intended use for results*
 
 ## 1.1 Research Questions
 
