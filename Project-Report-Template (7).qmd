@@ -28,6 +28,7 @@ library(ggformula)
 library(car)
 library(tinytex)
 library(broom)
+library(kableExtra)
 
 # read in data 
 
@@ -179,11 +180,10 @@ Our group was tasked with analyzing NVP, which quantifies the time-dependent, no
 The response variable we are investigating is non-linear viscous parameter. There parameters we used in our model are listed below.
 
 ```{r}
-library(kableExtra)
 #| label: tbl-variables
 #| echo: false
 #| tbl-cap: "Summary of Variables Used in Analysis"
-#| 
+#| tbl-pos: "H"
 variable.desc <- data.frame(Name = c("Cycle", "Frequency", "Amplitude", "Chemical Index", "Porosity"))
 variable.desc$Type <- c("Categorical", "Numerical", "Numerical","Categorical","Categorical")
 variable.desc$Notes <- c("Count at which data is taken", "The times the foam is squished over a time period", "The height of a squish", "The type of foam used (79, 100, 121", "High (71%), Low (81%)")
