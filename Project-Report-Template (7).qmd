@@ -27,6 +27,7 @@ library(mosaic)
 library(ggformula)
 library(car)
 library(tinytex)
+library(broom)
 
 # read in data 
 
@@ -195,7 +196,7 @@ knitr::kable(variable.desc, format = "latex", booktabs = TRUE,
 ```
 
 #  2. Exploratory Data Analysis (EDA)
-
+<!--
 *Description of important variables.*
 - *summary statistics*
 - *missing Data*
@@ -203,35 +204,128 @@ knitr::kable(variable.desc, format = "latex", booktabs = TRUE,
 
 *Relevant summary figures that provide intuition for the research questions and/or inform important modeling decisions (correlation structure, etc).*
 
-For example, notice the way @fig-example1 shows a scatterplot.
-
-```{r}
-#| echo: false
-#| label: fig-example1
-#| warning: false
-#| fig-cap: "Fuel Efficiency as it relates to vehicle weight for a sample of cars."
-#| fig-align: "center"
-#| fig-width: 3
-#| fig-height: 3
-
-
-data("mtcars")
-gf_point(mpg~ wt, data = mtcars)
-```
-
-These are interesting remarks about data summaries.  The overall mean fuel economy in the data is `r mean(mtcars$mpg, na.rm = TRUE)` miles per gallon, which I can calculate in-line since it's very simple.  Most code requires a code chunk, but raw code and output should never appear in the body of the report.  Here's a nice table of summary statistics formatted for the report in @tbl-summarystats.
-
-```{r}
-#| echo: false
-#| label: tbl-summarystats
-#| tbl-cap: "Summary Statistics for Engine Displacement by Cylinders"
-
-favstats(disp ~ cyl, data = mtcars) %>%
-  knitr::kable()
-
-```
-
 *Describe important outcomes of the EDA that the reader should notice.*
+-->
+
+First, we analyzed NVP values across the different samples. We noticed that some foam samples were squished more than others. Not many foam samples were squished more than 10,000 times, so we decided to remove data when the cycle count rose above 10,000. Also, we found three foam samples that had substantial spikes in NVP that deviated from their overall pattern over cycle count. We believe these NVP measurements may not be accurate, so we removed these unusual values while keeping the rest of the data for these samples. @fig-samples shows the NVP values over cycle count for a few samples, after removing high cycle counts and spikes in NVP. 
+
+```{r}
+#| label: fig-samples
+#| echo: false
+#| fig-cap: "Plot of NVP values for a few selected samples over the number of times the foam sample was squished."
+#| fig-pos: "H"
+#| fig-align: "center"
+
+some_samples <- foam_data |> 
+  filter(Sample_ID %in% c(100, 103, 104, 105, 106, 166, 150, 149))
+ggplot(data = some_samples, aes(x = Cycle_Count, y = NVP, group = Sample_ID,
+                     color = as.factor(Sample_ID))) +
+  geom_line() + geom_point() + # Lines for each subject
+  labs(title = "Plot of a few samples by cycle count", 
+       x = "Number of Squishes", y = "NVP", color = "ID")
+```
+
+Based on @fig-samples, we see that NVP seems to follow a slight increasing trend over cycle count, with higher increases at low cycle counts. Also, we notice that three samples start with a substantially higher NVP than the other samples. These are the only three samples in the entire data set that start with such high NVP values. However, the trend in NVP values over time does not appear to be much different for these samples, so we decided not to omit them. In addition, we see that the values of NVP are very small with respect to the cycle counts. Because of this, we decided to model NVP over the logarithm of cycle count instead of the raw cycle count. By doing this, we ensure that the variables in our model are on more similar scales. 
+
+Next, we analyzed the potential effects of different variables on NVP. Based on @fig-porosity-chemical, NVP tends to be higher for foam samples with a porosity of 81%. Also, chemicals 100 and 121 tend to have a higher average NVP.
+
+```{r}
+#| label: fig-porosity-chemical
+#| echo: false
+#| fig-cap: "Boxplots of average NVP by porosity and chemical index"
+#| fig-pos: "H"
+#| fig-align: "center"
+
+
+# Create a level 2 data frame for analysis of level 2 variables
+final_l2 <- foam_data |> group_by(Sample_ID) |>
+  summarise(Mean_NVP = mean(NVP),
+            Max_NVP = max(NVP), max_NVP_diff = max(diff(NVP)),
+            across(c(Chemical_Index, Porosity, Strain, Stress, 
+                     Relporo, Freq, Amp), first)) |> ungroup()
+# NVP vs. Porosity and Chemical Index
+final_l2 |> ggplot(aes(x = as.factor(Porosity), y = Mean_NVP, 
+                       fill = as.factor(Porosity))) +
+  geom_boxplot(outliers = F) + scale_fill_colorblind() +
+  labs(title = "Average NVP by Chemical Index and Porosity",
+       fill = "Porosity", x = "Porosity", y = "Average NVP") +
+  facet_wrap(vars(Chemical_Index)) +
+  geom_point(position = position_jitter(width = 0.25), 
+             color = "darkgray", cex = 1)
+
+```
+
+Next, we analyzed average NVP by frequency and amplitude. Based on @fig-freq-amp, average NVP tends to be higher at higher frequencies and amplitudes. 
+
+```{r}
+#| label: fig-freq-amp
+#| layout-ncol: 2
+#| fig-cap: "Average NVP by frequency and amplitude"
+#| fig-subcap:
+#|  - "Frequency"
+#|  - "Amplitude"
+#| fig-pos: "H"
+
+final_l2 |> ggplot(aes(x = Freq, y = Mean_NVP)) + geom_point() +
+  labs(title = "Average NVP by Frequency", x = "Frequency", 
+       y = "Average NVP")
+final_l2 |> ggplot(aes(x = Amp, y = Mean_NVP)) + geom_point() +
+  labs(title = "Average NVP by Amplitude", x = "Amplitude", 
+       y = "Average NVP")
+```
+
+## Deeper EDA
+
+To analyze this data further, we fit linear models of NVP by the logarithm of cycle count for each sample. We then observe the effects of different variables on the slopes. @fig-chemical-slope shows the effect of chemical index on the slopes. 
+
+```{r}
+#| label: fig-chemical-slope
+#| echo: false
+#| fig-cap: "Boxplots of slopes of NVP over logarithm of cycle count by chemical index, outlier slopes not shown"
+#| fig-pos: "H"
+#| fig-align: "center"
+#| fig-width: 6
+
+# Do EDA with slopes and intercepts
+# Fit a model for each group
+models <- foam_data %>%
+  group_by(Sample_ID) %>%
+  nest() %>%
+  mutate(model = map(data, ~lm(NVP ~ Log_Cycle, data = .x)))
+
+# Add model summaries
+models <- models %>%
+  mutate(
+    summary = map(model, summary),
+    coef = map(model, ~coef(.x)))
+
+# Get a data frame of the coefficients
+tidy_models <- models %>%
+  mutate(tidy = map(model, tidy)) %>%
+  unnest(tidy)
+
+# Change the data frame from long to wide
+tidy_models <- tidy_models |>
+  pivot_wider(names_from = term, 
+              values_from = c(estimate, std.error, statistic, p.value))
+tidy_to_add <- tidy_models |> select(-c(data, model, summary, coef))
+colnames(tidy_to_add) <- c("Sample_ID", "Intercept", "Slope", 
+                           "SE_Intercept", "SE_Slope",
+                           "tStatIntercept", "tStatSlope", "pValIntercept",
+                           "pValSlope")
+
+# Merge with the level 2 data set
+final_l2 <- full_join(final_l2, tidy_to_add, by = "Sample_ID")
+
+# Plot the slopes by chemical code
+final_l2 |> ggplot(aes(x = as.factor(Chemical_Index), y = Slope, 
+                       fill = as.factor(Chemical_Index))) +
+  geom_boxplot(outliers = F) + scale_fill_colorblind() +
+  labs(title = "Slope of NVP over Log(Cycle) by Chemical Index",
+       fill = "Chemical Index", x = "Chemical Index", y = "Slope")
+```
+
+In @fig-chemical-slope, we see that there are some differences between the chemicals in terms of slopes. Outlier slopes are omitted so that we can see these differences more clearly. Specifically, the slopes tend to be higher for chemical index 121 than for index 79. Thus, we may need to account for the effect of chemical index on slope in our model.
 
 # 3. Statistical Analysis 
 
@@ -469,7 +563,7 @@ kable(random_effects_table, digits = 5)
 
 
 ### R Script
-```{r ref.label=c('front-matter', 'fig-example1','tbl-summarystats', 'fig-example2', 'model-code', 'tbl-fixed-effects', 'tbl-random-effects', 'fig-model-predictions')}
+```{r ref.label=c('front-matter', 'fig-samples', 'fig-porosity-chemical', 'fig-freq-amp', 'fig-chemical-slope', 'model-code', 'tbl-fixed-effects', 'tbl-random-effects', 'fig-model-predictions', 'fig-diagnostics')}
 #| echo: true
 #| eval: false
 
