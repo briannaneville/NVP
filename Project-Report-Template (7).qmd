@@ -39,7 +39,8 @@ foam_raw <- read_excel("Foster_Mines_Capstone_Data_v2.xlsx", sheet = "Sheet1")
 
 # decompose SampleCode
 foam_data <- foam_raw %>%
-  separate(SampleCode, into = c("prefix", "Chemical_Index", "Porosity", "Sample_ID"), sep = "_", remove = FALSE) %>%
+  separate(SampleCode, into = c("prefix", "Chemical_Index", "Porosity", 
+                                "Sample_ID"), sep = "_", remove = FALSE) %>%
   select(-prefix)
 
 cyc_cols <- grep("^Cyc_", names(foam_data), value = TRUE)
@@ -48,7 +49,8 @@ td_cols <- grep("^tandelta_Cyc_", names(foam_data), value = TRUE)
 es_cols <- grep("^Estatic_MPA_Cyc_", names(foam_data), value = TRUE)
 nvp_cols <- grep("^NVP_Cyc_", names(foam_data), value = TRUE)
 
-meta_cols <- setdiff(names(foam_data), c(cyc_cols, e1_cols, td_cols, es_cols, nvp_cols))
+meta_cols <- setdiff(names(foam_data), c(cyc_cols, e1_cols, td_cols, es_cols, 
+                                         nvp_cols))
 
 # pivot data
 cyc_long <- foam_data %>%
@@ -396,8 +398,10 @@ foam_model_table <- data.frame(
   Term = c("(Intercept)", "Log(Cycle)", "Frequency", "Amplitude", 
            "Chemical Index = 100", "Chemical Index = 121", "Porosity = 81%", 
            "Log(Cycle) × Chemical Index=100", "Log(Cycle) × Chemical Index=121"),
-  Estimate = c(0.00823, 0.00030, 0.00121, 1.40689, 0.00636, 0.02025, 0.02384, 0.00104, 0.00066),
-  Std_Error = c(0.00567, 0.00021, 0.00036, 0.15047, 0.00590, 0.00468, 0.00429, 0.00038, 0.00030),
+  Estimate = c(0.00823, 0.00030, 0.00121, 1.40689, 0.00636, 0.02025, 0.02384, 
+               0.00104, 0.00066),
+  Std_Error = c(0.00567, 0.00021, 0.00036, 0.15047, 0.00590, 0.00468, 0.00429, 
+                0.00038, 0.00030),
   t_value = c(1.452, 1.442, 3.334, 9.350, 1.078, 4.322, 5.560, 2.734, 2.183)
 )
 
