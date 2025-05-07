@@ -424,7 +424,7 @@ We first discuss the meanings of each coefficient estimate:
 
 We come away with the following conclusions for the effects of the variables in the model on NVP:
 
-- **Amplitude**: Foams tested at larger amplitudes had higher NVP values, indicating more non-recoverable deformaion under greater compression.
+- **Amplitude**: Foams tested at larger amplitudes had higher NVP values, indicating more non-recoverable deformation under greater compression.
 - **Frequency**: Higher frequencies led to slightly higher NVP values, indicating that faster degradation when the foam is subjected to faster cycling.
 - **Porosity**: Foams with 81% porosity showed significantly higher NVP than those with 71% porosity, meaning they degrade more quickly under repeated stress.
 - **Chemical Index**: Foams with chemical index 121 had the highest baseline NVP and faster increases over time, indicating a higher rate of degradation compared to foams with chemical index 79.
@@ -483,7 +483,8 @@ If long-term durability is the goal, we recommend selecting foams with **lower N
 
 Information on mixed models: “Beyond Multiple Linear Regression: Applied Generalized Linear Models and Multilevel Models in R” by Paul Roback and Julie Legler
 
-Information on non-linear viscoelasticity: "Creep and fatigue of natural fibre composites" by M. Misra, S.S. Ahankari, and A.K. Mohanty. https://www.sciencedirect.com/science/article/abs/pii/B9781845697426500113 
+Information on non-linear viscoelasticity: "Creep and fatigue of natural fibre composites" by M. Misra, S.S. Ahankari, and A.K. Mohanty. 
+https://www.sciencedirect.com/science/article/abs/pii/B9781845697426500113 
 
 # 6. Additional Considerations
 
