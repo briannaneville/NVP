@@ -483,8 +483,8 @@ If long-term durability is the goal, we recommend selecting foams with **lower N
 
 Information on mixed models: “Beyond Multiple Linear Regression: Applied Generalized Linear Models and Multilevel Models in R” by Paul Roback and Julie Legler
 
-Information on non-linear viscoelasticity: "Creep and fatigue of natural fibre composites" by M. Misra, S.S. Ahankari, and A.K. Mohanty. 
-https://www.sciencedirect.com/science/article/abs/pii/B9781845697426500113 
+Information on non-linear viscoelasticity: *"Creep and fatigue of natural fibre composites"* by M. Misra, S.S. Ahankari, and A.K. Mohanty. [Link to article](https://www.sciencedirect.com/science/article/abs/pii/B9781845697426500113)
+
 
 # 6. Additional Considerations
 
@@ -496,7 +496,7 @@ While this analysis provides valuable insights into the degradation behavior of 
 
 These limitations should be considered when interpreting the results or extending the model to new material types or testing conditions.
   
-
+\newpage
 # Technical Appendix  
 
 **Mixed Effects Model Diagnostic Plots**
