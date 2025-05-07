@@ -479,7 +479,7 @@ In our model, we assume linearity and normality of residuals and random effects.
 
 # 4. Recommendations 
 
-If you are interested in using foam samples with higher NVP, we recommend selecting foams with 81% porosity, as these materials consistently exhibited higher NVP values and are likely to provide better energy absorption in use. In addition, foams with a chemical index of 121 are preferred for higher NVP, since they showed better baseline performance and greater resistance to degradation across cycles. When designing or testing foams, mechanical loading conditions should match expected use. Higher cycling frequencies and larger amplitudes increased NVP, so testing should reflect realistic stress levels. It is also important to consider that chemical formulation affects how quickly NVP declines with repeated use.
+If long-term durability is the goal, we recommend selecting foams with **lower NVP values**, as higher NVP is associated with faster degradation under repeated stress. Our analysis showed that foams with **chemical index 121** and **81\% porosity** exhibited higher NVP, indicating more non-recoverable deformation over time. On the other hand, foams with **chemical index 79** and **71\% porosity** maintained lower NVP values and degraded slower across cycles. Since **higher frequencies and larger amplitudes** led to increased NVP, testing protocols should use realistic levels of stress to accurately assess foam performance. Additionally, the chemical composition plays a key role in how quickly degradation occurs over time and should be considered when selecting materials for helmet design.
 
 # 5. Resources 
 
